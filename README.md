@@ -39,104 +39,49 @@ The security of RSA relies on the difficulty of factoring large numbers; thus, c
 ```
 #include <stdio.h>
 #include <string.h>
-#include <math.h>
-#include <ctype.h>
-#include <stdlib.h>
 
-// Function to calculate GCD using the Euclidean algorithm
-int gcd(int a, int b) {
-    while (b != 0) {
-        int temp = b;
-        b = a % b;
-        a = temp;
-    }
-    return a;
+long long modexp(long long b,long long e,long long m){
+    long long r=1;
+    while(e){ if(e&1) r=(r*b)%m; b=(b*b)%m; e>>=1; }
+    return r;
+}
+long long egcd(long long a,long long b,long long *x,long long *y){
+    if(!b){ *x=1; *y=0; return a; }
+    long long x1,y1,g=egcd(b,a%b,&x1,&y1);
+    *x=y1; *y=x1-(a/b)*y1; return g;
 }
 
-// Function to calculate (base^exp) % mod using modular exponentiation
-long long mod_exp(long long base, long long exp, long long mod) {
-    long long result = 1;
-    while (exp > 0) {
-        if (exp % 2 == 1)
-            result = (result * base) % mod;
-        base = (base * base) % mod;
-        exp = exp / 2;
-    }
-    return result;
-}
+int main(void){
+    int p=61,q=53;
+    int n=p*q, phi=(p-1)*(q-1), e=17;
+    long long x,y;
+    if (egcd(e,phi,&x,&y)!=1){ puts("e and phi not coprime"); return 1; }
+    int d = (int)((x%phi+phi)%phi);
 
-// Function to calculate the modular inverse of e mod phi using the extended Euclidean algorithm
-int mod_inverse(int e, int phi) {
-    int t = 0, newt = 1;
-    int r = phi, newr = e;
-    while (newr != 0) {
-        int quotient = r / newr;
-        int temp = t;
-        t = newt;
-        newt = temp - quotient * newt;
-        temp = r;
-        r = newr;
-        newr = temp - quotient * newr;
-    }
-    if (r > 1) return -1; // e is not invertible
-    if (t < 0) t = t + phi;
-    return t;
-}
-
-int main() {
-    // Step 1: Initialize prime numbers p and q (use larger primes for real-world applications)
-    int p = 61;
-    int q = 53;
-    
-    // Step 2: Compute n = p * q and phi = (p-1) * (q-1)
-    int n = p * q;
-    int phi = (p - 1) * (q - 1);
-
-    // Step 3: Choose an encryption key e such that 1 < e < phi and gcd(e, phi) = 1
-    int e = 17; // A commonly used public exponent
-    if (gcd(e, phi) != 1) {
-        printf("e and phi(n) are not coprime!\n");
-        return -1;
-    }
-
-    // Step 4: Compute the decryption key d, the modular inverse of e mod phi
-    int d = mod_inverse(e, phi);
-    if (d == -1) {
-        printf("No modular inverse found for e!\n");
-        return -1;
-    }
-
-    // Step 5: Display the public and private keys
     printf("Public Key: (e = %d, n = %d)\n", e, n);
     printf("Private Key: (d = %d, n = %d)\n", d, n);
 
-    // Step 6: Get the message from the user
-    char message[100];
+    char msg[100];
     printf("Enter a message to encrypt (alphabetic characters only): ");
-    fgets(message, sizeof(message), stdin);
-    int len = strlen(message);
-    if (message[len - 1] == '\n') message[len - 1] = '\0'; // Remove newline character
+    if(!fgets(msg,sizeof msg,stdin)) return 0;
+    size_t len = strlen(msg); if(len && msg[len-1]=='\n'){ msg[--len]=0; }
 
-    // Step 7: Encrypt the message
     printf("\nEncrypted Message:\n");
-    long long encrypted[100];
-    for (int i = 0; i < len; i++) {
-        int m = (int)message[i];  // Convert the character to its ASCII value
-        encrypted[i] = mod_exp(m, e, n);  // Encrypt the ASCII value using RSA
-        printf("%lld ", encrypted[i]);  // Print encrypted values
+    long long enc[100];
+    for(size_t i=0;i<len;i++){
+        int m = (unsigned char)msg[i];
+        enc[i] = modexp(m, e, n);
+        printf("%lld ", enc[i]);
     }
-    printf("\n");
-
-    // Step 8: Decrypt the message
-    printf("\nDecrypted Message:\n");
-    for (int i = 0; i < len; i++) {
-        int decrypted = (int)mod_exp(encrypted[i], d, n);  // Decrypt the ASCII value using RSA
-        printf("%c", (char)decrypted);  // Convert the decrypted ASCII value back to a character
+    printf("\n\nDecrypted Message:\n");
+    for(size_t i=0;i<len;i++){
+        int dec = (int)modexp(enc[i], d, n);
+        putchar((char)dec);
     }
-    printf("\n");
-
+    putchar('\n');
     return 0;
 }
+
 ```
 
 ## Output:
